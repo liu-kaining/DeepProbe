@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "deep-probe"
-version = "0.1.0"
+version = "0.1.1"
 description = "Research anything, deeply, in one line of code. A Python library wrapping Google Gemini Deep Research API."
 readme = "README.md"
 license = { text = "Apache-2.0" }

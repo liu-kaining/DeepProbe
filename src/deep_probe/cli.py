@@ -2,7 +2,7 @@
 
 import threading
 import time
-from typing import Annotated
+from typing import Annotated, Optional
 
 import typer
 from rich.console import Console
@@ -47,11 +47,11 @@ def main(
 def research(
     topic: Annotated[str, typer.Argument(help="Research topic or question")],
     save: Annotated[
-        str | None,
+        Optional[str],
         typer.Option("--save", "-s", help="Save report to file"),
     ] = None,
     resume: Annotated[
-        str | None,
+        Optional[str],
         typer.Option("--resume", "-r", help="Resume previous research by interaction ID"),
     ] = None,
     verbose: Annotated[
@@ -67,7 +67,7 @@ def research(
         typer.Option("--stream", help="Stream output in real-time"),
     ] = False,
     api_key: Annotated[
-        str | None,
+        Optional[str],
         typer.Option("--api-key", "-k", help="Google Gemini API key", envvar="GEMINI_API_KEY"),
     ] = None,
 ) -> None:
@@ -101,7 +101,7 @@ def research(
 def _run_research(
     probe: DeepProbe,
     topic: str,
-    save: str | None,
+    save: Optional[str],
     verbose: bool,
     quiet: bool,
     stream: bool,
@@ -297,7 +297,7 @@ def _run_streaming_research(
 def _run_resume(
     probe: DeepProbe,
     interaction_id: str,
-    save: str | None,
+    save: Optional[str],
     verbose: bool,
     quiet: bool,
 ) -> None:
@@ -323,7 +323,7 @@ def _run_resume(
 
 def _display_result(
     result: ResearchResult,
-    save: str | None,
+    save: Optional[str],
     verbose: bool,
     quiet: bool,
 ) -> None:
