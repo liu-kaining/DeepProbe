@@ -395,46 +395,54 @@ class DeepProbe:
         def process_stream(stream: Any) -> None:
             nonlocal interaction_id, last_event_id, is_complete, report_parts, thoughts
 
-            for chunk in stream:
-                # Track event ID for reconnection
-                if hasattr(chunk, "event_id"):
-                    last_event_id = chunk.event_id
+            try:
+                for chunk in stream:
+                    # Track event ID for reconnection
+                    if hasattr(chunk, "event_id"):
+                        last_event_id = chunk.event_id
 
-                # Handle interaction start
-                if hasattr(chunk, "event_type"):
-                    if chunk.event_type == "interaction.start":
-                        if hasattr(chunk, "interaction") and hasattr(chunk.interaction, "id"):
-                            interaction_id = str(chunk.interaction.id)
+                    # Handle interaction start
+                    if hasattr(chunk, "event_type"):
+                        if chunk.event_type == "interaction.start":
+                            if hasattr(chunk, "interaction") and hasattr(chunk.interaction, "id"):
+                                interaction_id = str(chunk.interaction.id)
 
-                    # Handle content delta
-                    elif chunk.event_type == "content.delta":
-                        if hasattr(chunk, "delta"):
-                            delta = chunk.delta
-                            if hasattr(delta, "type"):
-                                if delta.type == "text" and hasattr(delta, "text"):
-                                    text = delta.text
-                                    report_parts.append(text)
-                                    if on_text:
-                                        on_text(text)
-                                elif delta.type == "thought_summary":
-                                    if hasattr(delta, "content") and hasattr(delta.content, "text"):
-                                        thought_text = delta.content.text
-                                        thoughts.append(Thought(content=thought_text, phase="thinking"))
-                                        if on_thought:
-                                            on_thought(thought_text)
+                        # Handle content delta
+                        elif chunk.event_type == "content.delta":
+                            if hasattr(chunk, "delta"):
+                                delta = chunk.delta
+                                if hasattr(delta, "type"):
+                                    if delta.type == "text" and hasattr(delta, "text"):
+                                        text = delta.text
+                                        report_parts.append(text)
+                                        if on_text:
+                                            on_text(text)
+                                    elif delta.type == "thought_summary":
+                                        if hasattr(delta, "content") and hasattr(delta.content, "text"):
+                                            thought_text = delta.content.text
+                                            thoughts.append(Thought(content=thought_text, phase="thinking"))
+                                            if on_thought:
+                                                on_thought(thought_text)
 
-                    # Handle completion
-                    elif chunk.event_type == "interaction.complete":
-                        is_complete = True
+                        # Handle completion
+                        elif chunk.event_type == "interaction.complete":
+                            is_complete = True
 
-                    # Handle error
-                    elif chunk.event_type == "error":
-                        is_complete = True
-                        if hasattr(chunk, "error"):
-                            raise ProbeAPIError(
-                                f"Research error: {chunk.error}",
-                                interaction_id=interaction_id,
-                            )
+                        # Handle error
+                        elif chunk.event_type == "error":
+                            is_complete = True
+                            if hasattr(chunk, "error"):
+                                raise ProbeAPIError(
+                                    f"Research error: {chunk.error}",
+                                    interaction_id=interaction_id,
+                                )
+            except (ConnectionError, IOError, OSError) as e:
+                # Network error during streaming - will be handled by reconnection loop
+                error_msg = str(e).lower()
+                if "connection" in error_msg or "closed" in error_msg or "chunked" in error_msg:
+                    # This is expected - the reconnection loop will handle it
+                    return
+                raise
 
         # Initial streaming request with retry
         for attempt in range(self.config.max_retries + 1):
@@ -447,24 +455,60 @@ class DeepProbe:
                     agent_config=self._get_agent_config(),
                 )
                 process_stream(stream)
-                break
+                # If we get here and not complete, connection was closed
+                if not is_complete and interaction_id:
+                    break  # Will enter reconnection loop
+                elif is_complete:
+                    break  # Successfully completed
             except (ProbeAPIError, ProbeAuthError):
                 raise
-            except Exception as e:
+            except (ConnectionError, IOError, OSError) as e:
+                # Network error - try reconnection if we have interaction_id
+                if interaction_id:
+                    break  # Enter reconnection loop
                 if attempt >= self.config.max_retries:
-                    raise ProbeNetworkError(f"Failed to start streaming research: {e}")
+                    raise ProbeNetworkError(
+                        f"Failed to start streaming research: {e}",
+                        interaction_id=interaction_id,
+                    )
+                time.sleep(self.config.base_retry_delay * (2**attempt))
+            except Exception as e:
+                error_msg = str(e).lower()
+                # Check if it's a connection-related error
+                if "connection" in error_msg or "closed" in error_msg or "chunked" in error_msg:
+                    if interaction_id:
+                        break  # Enter reconnection loop
+                if attempt >= self.config.max_retries:
+                    raise ProbeNetworkError(
+                        f"Failed to start streaming research: {e}",
+                        interaction_id=interaction_id,
+                    )
                 time.sleep(self.config.base_retry_delay * (2**attempt))
 
         # Reconnection loop if not complete
         retry_count = 0
+        max_reconnect_attempts = self.config.max_retries * 2  # Allow more attempts for reconnection
+        
         while not is_complete and interaction_id:
-            if retry_count > self.config.max_retries:
+            if retry_count >= max_reconnect_attempts:
+                # Fallback: try polling mode to get final result
+                try:
+                    final_interaction = client.interactions.get(id=interaction_id)
+                    if hasattr(final_interaction, "status") and final_interaction.status == "completed":
+                        # Build result from final interaction
+                        return self._build_result(final_interaction, interaction_id)
+                except Exception:
+                    pass
+                
                 raise ProbeNetworkError(
-                    "Max reconnection attempts reached",
+                    f"Max reconnection attempts reached. Interaction ID: {interaction_id}",
                     interaction_id=interaction_id,
                 )
 
-            time.sleep(2)  # Wait before reconnecting
+            if retry_count > 0:
+                # Wait before reconnecting (exponential backoff)
+                wait_time = min(self.config.base_retry_delay * (2 ** min(retry_count, 3)), 30)
+                time.sleep(wait_time)
 
             try:
                 resume_stream = client.interactions.get(
@@ -474,9 +518,19 @@ class DeepProbe:
                 )
                 process_stream(resume_stream)
                 retry_count = 0  # Reset on success
+                if is_complete:
+                    break
+            except (ConnectionError, IOError, OSError) as e:
+                retry_count += 1
+                # Continue retrying for connection errors
+                continue
             except Exception as e:
                 retry_count += 1
-                if retry_count > self.config.max_retries:
+                error_msg = str(e).lower()
+                if "connection" in error_msg or "closed" in error_msg:
+                    # Connection error - continue retrying
+                    continue
+                if retry_count >= max_reconnect_attempts:
                     raise ProbeNetworkError(
                         f"Reconnection failed: {e}",
                         interaction_id=interaction_id,

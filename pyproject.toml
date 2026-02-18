@@ -7,10 +7,13 @@ name = "deep-probe"
 version = "0.1.0"
 description = "Research anything, deeply, in one line of code. A Python library wrapping Google Gemini Deep Research API."
 readme = "README.md"
-license = "Apache-2.0"
+license = { text = "Apache-2.0" }
 requires-python = ">=3.9"
 authors = [
-    { name = "Deep Probe Contributors" }
+    { name = "liukaining" }
+]
+maintainers = [
+    { name = "liukaining" }
 ]
 keywords = ["gemini", "deep-research", "ai", "research", "automation"]
 classifiers = [
@@ -32,6 +35,13 @@ dependencies = [
     "typer>=0.9.0",
     "python-dotenv>=1.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/liu-kaining/DeepProbe"
+Documentation = "https://github.com/liu-kaining/DeepProbe#readme"
+Repository = "https://github.com/liu-kaining/DeepProbe"
+Issues = "https://github.com/liu-kaining/DeepProbe/issues"
+"Bug Tracker" = "https://github.com/liu-kaining/DeepProbe/issues"
 
 [project.optional-dependencies]
 dev = [
