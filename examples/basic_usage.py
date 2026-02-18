@@ -1,5 +1,13 @@
 """Basic usage example for DeepProbe."""
 
+import sys
+import os
+
+# Add src to path
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+src_path = os.path.join(project_root, 'src')
+sys.path.insert(0, src_path)
+
 from deep_probe import DeepProbe
 
 # Initialize the client (uses GEMINI_API_KEY environment variable)
