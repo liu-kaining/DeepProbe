@@ -4,6 +4,9 @@
 
 A Python library that wraps Google Gemini Deep Research API with automatic reconnection and structured output.
 
+<img width="1024" height="549" alt="image" src="https://github.com/user-attachments/assets/e3045be1-20c1-406b-a916-8c3fb3c11d67" />
+
+
 ## Features
 
 - **Simple API**: One line of code to run deep research
