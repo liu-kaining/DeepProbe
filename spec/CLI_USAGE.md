@@ -37,6 +37,9 @@ deep-probe research "What is quantum computing?"
 # 基本研究
 python -m deep_probe.cli research "What is quantum computing?"
 
+# 从文件读取长提示词（适合很长的 prompt）
+python -m deep_probe.cli research -i prompt.txt --save report.md --stream --verbose
+
 # 保存到文件
 python -m deep_probe.cli research "AI trends 2024" --save report.md
 

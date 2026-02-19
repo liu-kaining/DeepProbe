@@ -86,6 +86,9 @@ The CLI uses a `research` subcommand. Examples:
 # Basic usage
 deep-probe research "What is quantum computing?"
 
+# Long prompt from file (e.g. -i prompt.txt)
+deep-probe research -i prompt.txt --save report.md --stream --verbose
+
 # Save to file
 deep-probe research "AI trends 2024" --save report.md
 

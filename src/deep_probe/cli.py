@@ -3,6 +3,7 @@
 import threading
 import time
 import warnings
+from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
@@ -46,7 +47,10 @@ def main(
 
 @app.command()
 def research(
-    topic: Annotated[str, typer.Argument(help="Research topic or question")],
+    topic: Annotated[
+        Optional[str],
+        typer.Argument(help="Research topic or question (omit when using -i/--input)"),
+    ] = None,
     save: Annotated[
         Optional[str],
         typer.Option("--save", "-s", help="Save report to file"),
@@ -54,6 +58,10 @@ def research(
     resume: Annotated[
         Optional[str],
         typer.Option("--resume", "-r", help="Resume previous research by interaction ID"),
+    ] = None,
+    input_file: Annotated[
+        Optional[str],
+        typer.Option("--input", "-i", help="Read research topic/prompt from file (for long prompts)"),
     ] = None,
     verbose: Annotated[
         bool,
@@ -74,18 +82,41 @@ def research(
 ) -> None:
     """Run deep research on a topic.
 
+    Topic can be given as an argument or read from a file with -i/--input (e.g. for long prompts).
+
     Examples:
         deep-probe research "What is quantum computing?"
+        deep-probe research -i prompt.txt --save report.md --stream --verbose
         deep-probe research "AI trends 2024" --save report.md
         deep-probe research --resume "interaction-id-here"
         deep-probe research "Climate change effects" --verbose
         deep-probe research "Research topic" --stream
-    
+
     Note: Deep research typically takes 2-10 minutes. Use --stream for real-time output.
     """
     if quiet and verbose:
         console.print("[red]Error: Cannot use both --quiet and --verbose[/red]")
         raise typer.Exit(1)
+
+    if resume:
+        pass  # topic not needed
+    else:
+        if input_file:
+            path = input_file
+            if not Path(path).exists():
+                console.print(f"[red]Error: Input file not found: {path}[/red]")
+                raise typer.Exit(1)
+            try:
+                topic = Path(path).read_text(encoding="utf-8").strip()
+            except OSError as e:
+                console.print(f"[red]Error: Cannot read file {path}: {e}[/red]")
+                raise typer.Exit(1)
+            if not topic:
+                console.print("[red]Error: Input file is empty[/red]")
+                raise typer.Exit(1)
+        if not topic:
+            console.print("[red]Error: Provide a topic as argument or use -i/--input <file>[/red]")
+            raise typer.Exit(1)
 
     try:
         probe = DeepProbe(api_key=api_key)
@@ -96,6 +127,7 @@ def research(
     if resume:
         _run_resume(probe, resume, save, verbose, quiet)
     else:
+        assert topic is not None  # validated above when not resume
         _run_research(probe, topic, save, verbose, quiet, stream)
 
 
