@@ -44,7 +44,7 @@ from .models import (
     TokenUsage,
 )
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 __all__ = [
     # Core
