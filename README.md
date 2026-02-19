@@ -78,6 +78,7 @@ result = probe.research_stream(
 ```
 
 ### CLI
+<img width="1014" height="548" alt="image" src="https://github.com/user-attachments/assets/5d2f02f3-5d9e-4afe-8d2f-79168b68bb99" />
 
 The CLI uses a `research` subcommand. Examples:
 
