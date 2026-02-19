@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-02-18
+
+### Added
+- Automatic retry mechanism for API rate limit errors (429)
+- Exponential backoff for rate limit retries (60s, 120s, 240s, 300s delays)
+- User-friendly retry progress notifications in CLI
+- Enhanced error messages with retry information
+
+### Improved
+- Better handling of quota exceeded errors with automatic retry (up to 5 attempts)
+- More informative error messages when rate limits are encountered
+
 ## [0.1.1] - 2026-02-18
 
 ### Fixed

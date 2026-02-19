@@ -12,7 +12,7 @@ source venv/bin/activate
 export PYTHONPATH=$PWD/src:$PYTHONPATH
 
 # 运行 CLI
-python -m deep_probe.cli "What is quantum computing?"
+python -m deep_probe.cli research "What is quantum computing?"
 ```
 
 ### 方式 2: 安装项目后使用（需要安装）
@@ -26,7 +26,7 @@ pip install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-hos
 pip install -e .
 
 # 使用 CLI 命令
-deep-probe "What is quantum computing?"
+deep-probe research "What is quantum computing?"
 ```
 
 ## CLI 命令示例
@@ -148,5 +148,5 @@ python -m deep_probe.cli "$@"
 然后：
 ```bash
 chmod +x deep-probe
-./deep-probe "What is quantum computing?"
+./deep-probe research "What is quantum computing?"
 ```

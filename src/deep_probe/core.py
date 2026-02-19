@@ -140,6 +140,8 @@ class DeepProbe:
     def _start_research_with_retry(self, client: Any, topic: str) -> Any:
         """Start a new background research interaction with retry logic."""
         last_error: Exception | None = None
+        rate_limit_retries = 0
+        max_rate_limit_retries = 5  # More retries for rate limits
 
         for attempt in range(self.config.max_retries + 1):
             try:
@@ -159,7 +161,30 @@ class DeepProbe:
                 if "auth" in error_msg or "api key" in error_msg or "unauthorized" in error_msg or "401" in error_msg:
                     raise ProbeAuthError(f"Authentication failed: {e}")
 
-                # Check if we should retry
+                # Rate limit / quota errors (429) - retry with exponential backoff
+                if "429" in error_msg or "too_many_requests" in error_msg or "quota" in error_msg or "rate limit" in error_msg:
+                    if rate_limit_retries < max_rate_limit_retries:
+                        # Use longer delays for rate limits: 60s, 120s, 240s, 300s, 300s
+                        delay = min(60 * (2 ** min(rate_limit_retries, 2)), 300)
+                        rate_limit_retries += 1
+                        # Log retry attempt (will be shown in CLI if verbose)
+                        import warnings
+                        warnings.warn(
+                            f"Rate limit encountered. Retrying in {delay}s (attempt {rate_limit_retries}/{max_rate_limit_retries})...",
+                            UserWarning,
+                            stacklevel=2,
+                        )
+                        time.sleep(delay)
+                        continue  # Retry the request
+                    else:
+                        # Max retries reached for rate limit
+                        raise ProbeAPIError(
+                            f"API quota exceeded or rate limit reached after {rate_limit_retries} retries: {e}",
+                            status_code=429,
+                            error_code="too_many_requests",
+                        )
+
+                # Check if we should retry for other errors
                 if attempt < self.config.max_retries:
                     delay = self.config.base_retry_delay * (2**attempt)
                     time.sleep(delay)

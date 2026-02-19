@@ -76,24 +76,26 @@ result = probe.research_stream(
 
 ### CLI
 
+The CLI uses a `research` subcommand. Examples:
+
 ```bash
 # Basic usage
-deep-probe "What is quantum computing?"
+deep-probe research "What is quantum computing?"
 
 # Save to file
-deep-probe "AI trends 2024" --save report.md
+deep-probe research "AI trends 2024" --save report.md
 
 # Show thinking process
-deep-probe "Climate change effects" --verbose
+deep-probe research "Climate change effects" --verbose
 
 # Stream output in real-time
-deep-probe "Research topic" --stream
+deep-probe research "Research topic" --stream
 
 # Quiet mode (only output report)
-deep-probe "Test topic" --quiet
+deep-probe research "Test topic" --quiet
 
 # Resume previous research
-deep-probe --resume "interaction-id-here"
+deep-probe research --resume "interaction-id-here"
 ```
 
 ## Configuration

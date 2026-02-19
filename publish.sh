@@ -31,7 +31,15 @@ python -m twine check dist/*
 
 # 发布到 PyPI
 echo "📤 上传到 PyPI..."
-python -m twine upload dist/*
+# Get the latest version from pyproject.toml to upload only new version
+LATEST_VERSION=$(grep -E "^version = " pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+if [ -n "$LATEST_VERSION" ]; then
+    echo "📦 Uploading version $LATEST_VERSION only..."
+    python -m twine upload --skip-existing dist/deep_probe-${LATEST_VERSION}*
+else
+    echo "⚠️  Could not detect version, uploading all files with --skip-existing..."
+    python -m twine upload --skip-existing dist/*
+fi
 
 echo "✅ 发布完成！"
 echo "📝 访问: https://pypi.org/project/deep-probe/"

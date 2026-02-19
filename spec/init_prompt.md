@@ -37,7 +37,7 @@ print(result.thoughts)    # Agent 的思考路径 (Log)
 
 ```bash
 # 直接在终端跑，带漂亮的进度条和实时思考日志
-deep-probe "分析 DeepSeek 的技术架构创新点" --save report.md
+deep-probe research "分析 DeepSeek 的技术架构创新点" --save report.md
 
 ```
 
@@ -100,7 +100,7 @@ deep_probe/
 
 
 4. **CLI 工具**:
-* 命令 `deep-probe "TOPIC"`。
+* 命令 `deep-probe research "TOPIC"`。
 * 使用 `rich.live` 展示实时的 Agent 思考过程 (Thinking Process)。
 * 支持 `--save` 参数保存 Markdown。
 

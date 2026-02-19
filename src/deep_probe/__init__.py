@@ -20,9 +20,9 @@ Example:
 
 For CLI usage:
     ```bash
-    deep-probe "What is quantum computing?"
-    deep-probe "AI trends" --save report.md
-    deep-probe --resume "interaction-id"
+    deep-probe research "What is quantum computing?"
+    deep-probe research "AI trends" --save report.md
+    deep-probe research --resume "interaction-id"
     ```
 """
 
@@ -44,7 +44,7 @@ from .models import (
     TokenUsage,
 )
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 __all__ = [
     # Core

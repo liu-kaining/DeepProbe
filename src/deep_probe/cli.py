@@ -2,6 +2,7 @@
 
 import threading
 import time
+import warnings
 from typing import Annotated, Optional
 
 import typer
@@ -13,7 +14,7 @@ from rich.status import Status
 
 from . import __version__
 from .core import DeepProbe
-from .exceptions import DeepProbeError, ProbeNetworkError
+from .exceptions import DeepProbeError, ProbeAPIError, ProbeNetworkError
 from .models import ResearchResult
 from .utils import save_report
 
@@ -74,11 +75,11 @@ def research(
     """Run deep research on a topic.
 
     Examples:
-        deep-probe "What is quantum computing?"
-        deep-probe "AI trends 2024" --save report.md
-        deep-probe --resume "interaction-id-here"
-        deep-probe "Climate change effects" --verbose
-        deep-probe "Research topic" --stream
+        deep-probe research "What is quantum computing?"
+        deep-probe research "AI trends 2024" --save report.md
+        deep-probe research --resume "interaction-id-here"
+        deep-probe research "Climate change effects" --verbose
+        deep-probe research "Research topic" --stream
     
     Note: Deep research typically takes 2-10 minutes. Use --stream for real-time output.
     """
@@ -123,6 +124,18 @@ def _run_research(
             result = _run_polling_research(probe, topic, verbose, quiet)
 
         _display_result(result, save, verbose, quiet)
+    except ProbeAPIError as e:
+        if e.status_code == 429 or e.error_code == "too_many_requests":
+            console.print("\n[red]❌ API Quota Exceeded (after automatic retries)[/red]")
+            console.print(f"[yellow]{e.message}[/yellow]")
+            console.print("\n[cyan]💡 Solutions:[/cyan]")
+            console.print("  1. Wait a few minutes and try again")
+            console.print("  2. Check your Google AI Studio quota: https://aistudio.google.com/apikey")
+            console.print("  3. Upgrade your API plan if needed")
+            console.print("\n[dim]Note: The system automatically retried 5 times with increasing delays (60s, 120s, 240s, etc.)[/dim]")
+        else:
+            console.print(f"\n[red]Error: {e}[/red]")
+        raise typer.Exit(1)
     except DeepProbeError as e:
         console.print(f"\n[red]Error: {e}[/red]")
         if e.interaction_id:
@@ -146,6 +159,15 @@ def _run_polling_research(
     thoughts_received = []
     start_time = time.time()
     result = None
+    
+    # Capture warnings for rate limit retries
+    def show_warning(message, category, filename, lineno, file=None, line=None):
+        if "Rate limit" in str(message) or "retrying" in str(message).lower():
+            console.print(f"[yellow]⚠️  {message}[/yellow]")
+    
+    # Set up warning handler
+    old_showwarning = warnings.showwarning
+    warnings.showwarning = show_warning
     
     def on_thought(thought: str) -> None:
         """Callback for thinking summaries."""
@@ -209,6 +231,9 @@ def _run_polling_research(
         if result and hasattr(result, 'interaction_id') and result.interaction_id:
             console.print(f"[cyan]💡 Resume with: python -m deep_probe.cli research --resume {result.interaction_id}[/cyan]")
         raise typer.Exit(130)
+    finally:
+        # Restore warning handler
+        warnings.showwarning = old_showwarning
     
     elapsed_total = time.time() - start_time
     elapsed_min = elapsed_total / 60
@@ -276,6 +301,18 @@ def _run_streaming_research(
                 if result.report:
                     console.print(f"[dim]   📝 Report length: {len(result.report)} characters[/dim]")
         
+    except ProbeAPIError as e:
+        if e.status_code == 429 or e.error_code == "too_many_requests":
+            console.print("\n[red]❌ API Quota Exceeded (after automatic retries)[/red]")
+            console.print(f"[yellow]{e.message}[/yellow]")
+            console.print("\n[cyan]💡 Solutions:[/cyan]")
+            console.print("  1. Wait a few minutes and try again")
+            console.print("  2. Check your Google AI Studio quota: https://aistudio.google.com/apikey")
+            console.print("  3. Upgrade your API plan if needed")
+            console.print("\n[dim]Note: The system automatically retried 5 times with increasing delays (60s, 120s, 240s, etc.)[/dim]")
+        else:
+            console.print(f"\n[red]Error: {e}[/red]")
+        raise typer.Exit(1)
     except ProbeNetworkError as e:
         elapsed = time.time() - start_time
         console.print(f"\n[yellow]⚠️  Network connection interrupted after {elapsed:.0f}s[/yellow]")
@@ -313,6 +350,18 @@ def _run_resume(
                 result = probe.resume(interaction_id)
 
         _display_result(result, save, verbose, quiet)
+    except ProbeAPIError as e:
+        if e.status_code == 429 or e.error_code == "too_many_requests":
+            console.print("\n[red]❌ API Quota Exceeded (after automatic retries)[/red]")
+            console.print(f"[yellow]{e.message}[/yellow]")
+            console.print("\n[cyan]💡 Solutions:[/cyan]")
+            console.print("  1. Wait a few minutes and try again")
+            console.print("  2. Check your Google AI Studio quota: https://aistudio.google.com/apikey")
+            console.print("  3. Upgrade your API plan if needed")
+            console.print("\n[dim]Note: The system automatically retried 5 times with increasing delays (60s, 120s, 240s, etc.)[/dim]")
+        else:
+            console.print(f"\n[red]Error: {e}[/red]")
+        raise typer.Exit(1)
     except DeepProbeError as e:
         console.print(f"\n[red]Error: {e}[/red]")
         raise typer.Exit(1)
